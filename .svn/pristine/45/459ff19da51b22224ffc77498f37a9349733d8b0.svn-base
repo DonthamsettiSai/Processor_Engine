@@ -1,0 +1,14 @@
+spring.datasource.url = jdbc:mysql://172.16.110.238:3306/provisioning_p4_sp27?autoReconnect=true&useUnicode=true&characterEncoding=UTF-8&allowMultiQueries=true&useSSL=false&noAccessToProcedureBodies=true
+spring.datasource.username = dev12
+spring.datasource.password = Dev12@2019
+#API_URL = getContractGenerationInfo?workOrderID=
+#USER-NAME = admin
+#PASSWORD = admin
+#KYC_CHEKC_URL = config/getAllConfigs?tenantID=10001&code=IS_KYC_CHK_REQ
+
+#CATALOGUE_URL=http://172.16.110.239:8085/catalogue/
+#CATALOGUE_PWD =admin
+#CATALOGUE_USER_NAME= admin
+#OMS_USERNAME = admin
+#OMS_PWD = admin
+#omsURL = http://172.16.110.239:8086/oms/

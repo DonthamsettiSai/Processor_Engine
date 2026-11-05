@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration>
+  <Properties>
+	<property name="PROCESOR-INFO" value="/opt/Spring-Boot/Logs/process-provisioning-info.log" />
+	<property name="PROCESOR-ERROR" value="/opt/Spring-Boot/Logs/process-provisioning-error.log" />	
+	<property name="PROCESOR-WARN" value="/opt/Spring-Boot/Logs/process-provisioning-warn.log" />	
+	<property name="PROCESOR-DEBUG" value="/opt/Spring-Boot/Logs/process-provisioning-debug.log" />
+	<property name="PROCESOR-FATAL" value="/opt/Spring-Boot/Logs/process-provisioning-fatal.log" />	
+	<property name="PROCESOR-TRACE" value="/opt/Spring-Boot/Logs/process-provisioning-trace.log" />			
+</Properties>
+	
+	
+	<Appenders>	
+	
+		<!-- Console Appender -->
+		<Console name="Console" target="SYSTEM_OUT">
+			<PatternLayout pattern="%d{yyyy-MMM-dd HH:mm:ss a} [%t] %-5level %logger{36} - %msg%n" />
+		</Console>
+
+		<!-- Rolling File Appender Here  TimeBasedTriggeringPolicy interval 1 means one day -->
+		<RollingFile name="FileInfoAppender" fileName="${PROCESOR-INFO}" filePattern="/opt/Spring-Boot/Logs/process-provisioning-info-%d{yyyy-MM-dd}-%i.log">
+			<LevelRangeFilter minLevel="INFO" maxLevel="INFO" onMatch="ACCEPT" onMismatch="DENY"/>
+			<PatternLayout pattern="%d{yyyy-MMM-dd HH:mm:ss a} [%t] %-5level %logger{36} - %msg%n" />
+			<Policies>
+				<SizeBasedTriggeringPolicy size="10MB" />
+				<!-- <TimeBasedTriggeringPolicy interval="1" /> -->
+			</Policies>
+			<DefaultRolloverStrategy max="10" />
+		</RollingFile>
+		
+		<RollingFile name="FileErrorAppender" fileName="${PROCESOR-ERROR}"  filePattern="/opt/Spring-Boot/Logs/process-provisioning-error-%d{yyyy-MM-dd}-%i.log">
+			<LevelRangeFilter minLevel="ERROR" maxLevel="ERROR" onMatch="ACCEPT" onMismatch="DENY"/>
+			<PatternLayout pattern="%d{yyyy-MMM-dd HH:mm:ss a} [%t] %-5level %logger{36} - %msg%n" />
+			<Policies>
+				<SizeBasedTriggeringPolicy size="10MB" />
+				<!-- <TimeBasedTriggeringPolicy interval="1" /> -->
+			</Policies>
+			<DefaultRolloverStrategy max="10" />
+		</RollingFile>
+		
+		<RollingFile name="FileWarnAppender" fileName="${PROCESOR-WARN}" filePattern="/opt/Spring-Boot/Logs/process-provisioning-warn-%d{yyyy-MM-dd}-%i.log">
+			<LevelRangeFilter minLevel="WARN" maxLevel="WARN" onMatch="ACCEPT" onMismatch="DENY"/>
+			<PatternLayout pattern="%d{yyyy-MMM-dd HH:mm:ss a} [%t] %-5level %logger{36} - %msg%n" />
+			<Policies>
+				<SizeBasedTriggeringPolicy size="10MB" />
+				<!-- <TimeBasedTriggeringPolicy interval="1" /> -->
+			</Policies>
+			<DefaultRolloverStrategy max="10" />
+		</RollingFile>
+		
+		<RollingFile name="FileDebugAppender" fileName="${PROCESOR-DEBUG}" filePattern="/opt/Spring-Boot/Logs/process-provisioning-debug-%d{yyyy-MM-dd}-%i.log">
+			<LevelRangeFilter minLevel="DEBUG" maxLevel="DEBUG" onMatch="ACCEPT" onMismatch="DENY"/>
+			<PatternLayout pattern="%d{yyyy-MMM-dd HH:mm:ss a} [%t] %-5level %logger{36} - %msg%n" />
+			<Policies>
+				<SizeBasedTriggeringPolicy size="10MB" />
+				<!-- <TimeBasedTriggeringPolicy interval="1" /> -->
+			</Policies>
+			<DefaultRolloverStrategy max="10" />
+		</RollingFile>
+		
+		<RollingFile name="FileFatalAppender" fileName="${PROCESOR-FATAL}" filePattern="/opt/Spring-Boot/Logs/process-provisioning-error-%d{yyyy-MM-dd}-%i.log">
+			<LevelRangeFilter minLevel="FATAL" maxLevel="FATAL" onMatch="ACCEPT" onMismatch="DENY"/>
+			<PatternLayout pattern="%d{yyyy-MMM-dd HH:mm:ss a} [%t] %-5level %logger{36} - %msg%n" />
+			<Policies>
+				<SizeBasedTriggeringPolicy size="10MB" />
+				<!-- <TimeBasedTriggeringPolicy interval="1" /> -->
+			</Policies>
+			<DefaultRolloverStrategy max="10" />
+		</RollingFile>
+		
+		<RollingFile name="FileTraceAppender" fileName="${PROCESOR-TRACE}" filePattern="/opt/Spring-Boot/Logs/process-provisioning-error-%d{yyyy-MM-dd}-%i.log">
+			<LevelRangeFilter minLevel="TRACE" maxLevel="TRACE" onMatch="ACCEPT" onMismatch="DENY"/>
+			<PatternLayout pattern="%d{yyyy-MMM-dd HH:mm:ss a} [%t] %-5level %logger{36} - %msg%n" />
+			<Policies>
+				<SizeBasedTriggeringPolicy size="10MB" />
+				<!-- <TimeBasedTriggeringPolicy interval="1" /> -->
+			</Policies>
+			<DefaultRolloverStrategy max="10" />
+		</RollingFile>					
+			
+
+	</Appenders>
+	
+
+	<Loggers>
+		<!-- Log everything in custom package -->
+		<!-- <Logger name="com.knot" level="info" additivity="false">
+			<AppenderRef ref="Console" />
+			<AppenderRef ref="FileInfoAppender" />
+		</Logger>
+		
+		<Logger name="com.knot" level="info" additivity="false">
+			<AppenderRef ref="Console" />
+			<AppenderRef ref="FileErrorAppender" />
+		</Logger>
+		
+		<Logger name="com.knot" level="info" additivity="false">
+			<AppenderRef ref="Console" />
+			<AppenderRef ref="FileWarnAppender" />
+		</Logger>
+		
+		<Logger name="com.knot" level="info" additivity="false">
+			<AppenderRef ref="Console" />
+			<AppenderRef ref="FileDebugAppender" />
+		</Logger>
+		
+		<Logger name="com.knot" level="info" additivity="false">
+			<AppenderRef ref="Console" />
+			<AppenderRef ref="FileFatalAppender" />
+		</Logger>
+		
+		<Logger name="com.knot" level="info" additivity="false">
+			<AppenderRef ref="Console" />
+			<AppenderRef ref="FileTraceAppender" />
+		</Logger> -->
+		 <Logger name="com.knot" level="debug" additivity="false">
+			<AppenderRef ref="FileInfoAppender"/>
+		    <AppenderRef ref="FileFatalAppender"/>
+			<AppenderRef ref="FileDebugAppender"/>
+			<AppenderRef ref="FileErrorAppender"/> 
+			<AppenderRef ref="FileWarnAppender"/> 
+			<!-- <AppenderRef ref="RollingFileTrace"/>  -->
+		</Logger>
+
+		<Root level="info">
+			<AppenderRef ref="Console" />
+			<AppenderRef ref="FileDebugAppender" />
+			<AppenderRef ref="FileInfoAppender" />
+			<AppenderRef ref="FileWarnAppender" />
+			<AppenderRef ref="FileErrorAppender" />
+			<AppenderRef ref="FileFatalAppender" />
+			<AppenderRef ref="FileTraceAppender" />
+		</Root>
+
+	</Loggers>
+</Configuration>

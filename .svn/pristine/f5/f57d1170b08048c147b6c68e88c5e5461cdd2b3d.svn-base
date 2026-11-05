@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+	targetNamespace="http://procesprov.com/"
+	xmlns:pro="http://procesprov.com/" elementFormDefault="unqualified">
+
+	<xs:element name="activeFirstRequest">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="msisdn" type="xs:string" minOccurs="0"/>
+				<xs:element name="source" type="xs:string" minOccurs="0" />
+				<xs:element name="requestCompletionTime" type="xs:string" minOccurs="0"/>
+				 <xs:element name="reqDtlID" type="xs:string" minOccurs="0"/>
+			</xs:sequence>
+		</xs:complexType>
+	</xs:element>
+
+	<xs:element name="activeFirstResponse">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="statusCode" type="xs:string" />
+				<xs:element name="statusMessage" type="xs:string" />
+			</xs:sequence>
+		</xs:complexType>
+	</xs:element>
+
+</xs:schema>
