@@ -3,6 +3,7 @@ package com.knot.provisioning.serviceimpl;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.Future;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -28,14 +29,12 @@ import com.knot.provisioning.service.ProvisioningRequestService;
 import com.knot.provisioning.soapclient.SoapClient;
 import com.knot.provisioning.soapclient.SoapConnector;
 import com.knot.provisioning.utill.Constants;
-import com.knot.provisioning.utill.MdcAwareRunnable;
 import com.knot.redis.dto.TenantsDTO;
 
 /**
- * Conservative per-pod processor coordinator. It deliberately processes one
- * provisioning request at a time in each pod because ProvisionServiceImpl has
- * request-scoped mutable state. MySQL SKIP LOCKED allows other pods to work in
- * parallel without sharing that state.
+ * Conservative per-pod processor coordinator. Only one request is dispatched at
+ * a time on each pod because the existing ProvisionServiceImpl has mutable
+ * request-scoped state. Other pods can process other work using MySQL SKIP LOCKED.
  */
 @Primary
 @Service
@@ -65,6 +64,7 @@ public class ProductionProvisioningServiceImpl extends ProvisioningServiceImpl {
             }, new ThreadPoolExecutor.AbortPolicy());
 
     private volatile java.util.concurrent.ScheduledExecutorService poller;
+    private volatile Future<?> activeRequest;
 
     public ProductionProvisioningServiceImpl(ProvisioningDao provisioningDao,
             ProvisioningRequestService requestService, ProvisionService provisionService,
@@ -111,25 +111,30 @@ public class ProductionProvisioningServiceImpl extends ProvisioningServiceImpl {
         }
         Map<String, String> originalContext = ThreadContext.getImmutableContext();
         try {
-            if (requestWorker.getActiveCount() > 0 || !requestWorker.getQueue().isEmpty()) {
-                log.debug("Request worker is busy; skipping claim cycle");
+            Future<?> inFlight = activeRequest;
+            if (inFlight != null && !inFlight.isDone()) {
+                log.debug("A provisioning request is still in flight; skipping claim cycle");
                 return;
             }
+            activeRequest = null;
+
             List<TenantsDTO> tenants = referenceNetwork.getAllTenants();
             if (tenants == null || tenants.isEmpty()) {
                 log.warn("Tenant lookup returned no tenants; no request claim attempted");
                 return;
             }
+
+            // Claim and dispatch at most one request per cycle. This prevents a quick
+            // tenant loop from claiming more rows than the one-thread worker can run.
             for (TenantsDTO tenant : tenants) {
-                if (requestWorker.getActiveCount() > 0 || !requestWorker.getQueue().isEmpty()) {
-                    break;
-                }
                 String tenantId = tenant == null ? null : tenant.getTenantID();
                 if (!StringUtils.hasText(tenantId)) {
                     log.warn("Skipping tenant entry with an empty tenant ID");
                     continue;
                 }
-                claimAndSubmitOne(tenantId);
+                if (claimAndSubmitOne(tenantId)) {
+                    break;
+                }
             }
         } catch (Exception e) {
             log.error("Provisioning poll cycle failed", e);
@@ -140,42 +145,39 @@ public class ProductionProvisioningServiceImpl extends ProvisioningServiceImpl {
         }
     }
 
-    private void claimAndSubmitOne(String tenantId) {
-        String maxRecords = "1";
-        String configured = cache.strConfigVal(Constants.MAX_TENANTS, tenantId);
-        if (StringUtils.hasText(configured) && !"NA".equalsIgnoreCase(configured.trim())
-                && !"-1".equals(configured.trim())) {
-            // Deliberately cap to one because the existing worker service has mutable
-            // request state. Increase only after that state is made request-local.
-            maxRecords = "1";
-        }
-
+    private boolean claimAndSubmitOne(String tenantId) {
         ThreadContext.put("TENANT_ID", tenantId);
         try {
-            List<ProvisioningRequest> requests = requestService.getProvisioningRequests(tenantId, maxRecords);
+            List<ProvisioningRequest> requests = requestService.getProvisioningRequests(tenantId, "1");
             if (requests == null || requests.isEmpty()) {
                 log.debug("No request claimed for tenantId={}", tenantId);
-                return;
+                return false;
             }
+
             ProvisioningRequest request = requests.get(0);
             ThreadContext.put("REQUEST_ID", String.valueOf(request.getRequestID()));
-            log.info("Submitting claimed provisioning request: tenantId={}, requestId={}, workOrderId={}",
+            log.info("Dispatching claimed request: tenantId={}, requestId={}, workOrderId={}",
                     tenantId, request.getRequestID(), request.getWorkOrderID());
-            requestWorker.execute(new MdcAwareRunnable(() -> {
-                try {
-                    provisionService.processProvisioningRequest(request, provisioningDao, requestWorker,
-                            cache, omsNetwork, restTemplate, soapConnector, soapClient, umsNetwork, referenceNetwork);
-                } catch (Exception e) {
-                    log.error("Failed to submit provisioning request: tenantId={}, requestId={}",
-                            tenantId, request.getRequestID(), e);
-                }
-            }));
+
+            // processProvisioningRequest submits its monitoring task to requestWorker
+            // and returns its Future. Do not wrap that call in the same one-thread pool:
+            // waiting from a worker thread would deadlock the nested submission.
+            Future<?> submitted = provisionService.processProvisioningRequest(request, provisioningDao,
+                    requestWorker, cache, omsNetwork, restTemplate, soapConnector, soapClient,
+                    umsNetwork, referenceNetwork);
+            if (submitted == null) {
+                log.error("Provisioning service did not submit requestId={} tenantId={}; stale recovery will retry",
+                        request.getRequestID(), tenantId);
+                return true;
+            }
+            activeRequest = submitted;
+            return true;
         } catch (java.util.concurrent.RejectedExecutionException e) {
-            // This should be prevented by the busy check. Leave the DB record in
-            // progress for the configured stale-request recovery path and report it.
-            log.error("Request worker rejected claimed request for tenantId={}; stale recovery will retry", tenantId, e);
+            log.error("Worker rejected request for tenantId={}; stale recovery will retry", tenantId, e);
+            return true;
         } catch (Exception e) {
             log.error("Failed to claim/submit provisioning request for tenantId={}", tenantId, e);
+            return true;
         } finally {
             ThreadContext.remove("TENANT_ID");
             ThreadContext.remove("REQUEST_ID");
